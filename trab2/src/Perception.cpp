@@ -223,14 +223,14 @@ void Perception::updateMapLaserWithLogOdds(const std::vector<float>& z)
 
     for (int cellX = rx -maxRangeInt; cellX <= rx +maxRangeInt; cellX++){
         for (int cellY = ry -maxRangeInt; cellY <= ry +maxRangeInt; cellY++){
-            r = sqrt(pow(cellX - rx, 2) + pow(cellY - ry));
+            r = sqrt(pow(cellX - rx, 2) + pow(cellY - ry, 2));
             phi = atan2(cellY - ry, cellX - rx) - theta;
             phi = normalizeAngleDEG(phi);
             k = getNearestLaserBeam(phi);
 
             i = getCellIndexFromXY(cellX, cellY);
             
-            if(r > min(maxRangeInt, z[k] + (lambda_r*scale_)/2) || abs(phi - getAngleOfLaserBeam(k)) > lambda_phi/2){
+            if(r > std::min(maxRangeInt, z[k] + (lambda_r*scale_)/2) || abs(phi - getAngleOfLaserBeam(k)) > lambda_phi/2){
                 gridLaserLogOdds_[i] = gridLaserLogOdds_[i];                        //Unknown cell   
             }else if(z[k] < maxRangeInt && abs(r - z[k]) < (lambda_r*scale_)/2){
                 gridLaserLogOdds_[i] = locc + gridLaserLogOdds_[i];                 //Occupied cell
@@ -275,19 +275,19 @@ void Perception::updateMapLaserWithHIMM(const std::vector<float>& z)
 
     for (int cellX = rx -maxRangeInt; cellX <= rx +maxRangeInt; cellX++){
         for (int cellY = ry -maxRangeInt; cellY <= ry +maxRangeInt; cellY++){
-            r = sqrt(pow(cellX - rx, 2) + pow(cellY - ry));
+            r = sqrt(pow(cellX - rx, 2) + pow(cellY - ry, 2));
             phi = atan2(cellY - ry, cellX - rx) - theta;
             phi = normalizeAngleDEG(phi);
             k = getNearestLaserBeam(phi);
 
             i = getCellIndexFromXY(cellX, cellY);
             
-            if(r > min(maxRangeInt, z[k] + (lambda_r*scale_)/2) || abs(phi - getAngleOfLaserBeam(k)) > lambda_phi/2){
+            if(r > std::min(maxRangeInt, z[k] + (lambda_r*scale_)/2) || abs(phi - getAngleOfLaserBeam(k)) > lambda_phi/2){
                 gridLaserHIMM_[i] = gridLaserHIMM_[i];                              //Unknown cell   
             }else if(z[k] < maxRangeInt && abs(r - z[k]) < (lambda_r*scale_)/2){
-                gridLaserHIMM_[i] = min(15, gridLaserHIMM_[i] + 3);                 //Occupied cell
+                gridLaserHIMM_[i] = std::min(15, gridLaserHIMM_[i] + 3);                 //Occupied cell
             }else if(r <= z[k]){
-                gridLaserHIMM_[i] = max(0, gridLaserHIMM_[i] - 1);                  //Free cell
+                gridLaserHIMM_[i] = std::max(0, gridLaserHIMM_[i] - 1);                  //Free cell
             }
 
             msg_mapLaserHIMM_.data[i] = (gridLaserHIMM_[i]/15)*100
@@ -330,14 +330,14 @@ void Perception::updateMapSonar(const std::vector<float>& z)
 
     for (int cellX = rx -maxRangeInt; cellX <= rx +maxRangeInt; cellX++){
         for (int cellY = ry -maxRangeInt; cellY <= ry +maxRangeInt; cellY++){
-            r = sqrt(pow(cellX - rx, 2) + pow(cellY - ry));
+            r = sqrt(pow(cellX - rx, 2) + pow(cellY - ry, 2));
             alpha = atan2(cellY - ry, cellX - rx) - theta;
             alpha = normalizeAngleDEG(alpha);
             k = getNearestLaserBeam(alpha);
 
             i = getCellIndexFromXY(cellX, cellY);
             
-            if(r > min(maxRangeInt, z[k] + (lambda_r*scale_)/2) || abs(alpha - getAngleOfSonarBeam(k)) > lambda_phi/2){
+            if(r > std::min(maxRangeInt, z[k] + (lambda_r*scale_)/2) || abs(alpha - getAngleOfSonarBeam(k)) > lambda_phi/2){
                 OccUpdate = 0.5;                                                                            //Region III & IV
             }else if(z[k] < maxRangeInt && abs(r - z[k]) < (lambda_r*scale_)/2){    
                 OccUpdate = 0.5 * (((maxRangeInt - r)/maxRangeInt + (beta - alpha)/beta)/2) + 0.5;          //Region I
@@ -346,7 +346,7 @@ void Perception::updateMapSonar(const std::vector<float>& z)
             }
 
             Occ = (OccUpdate * gridSonar_[i])/((OccUpdate * gridSonar_[i]) + ((1 - OccUpdate) * (1 - gridSonar_[i])));
-            gridSonar_[i] = min(0.99, max(0.01, Occ));
+            gridSonar_[i] = std::min(0.99, std::max(0.01, Occ));
 
             msg_mapSonar_.data[i] = gridSonar_[i]*100;
         }
