@@ -231,18 +231,16 @@ void Perception::updateMapLaserWithLogOdds(const std::vector<float>& z)
             i = getCellIndexFromXY(cellX, cellY);
             
             if(r > min(maxRangeInt, z[k] + (lambda_r*scale_)/2) || abs(phi - getAngleOfLaserBeam(k)) > lambda_phi/2){
-                //Unknown: gridLaserLogOdds_[i] = gridLaserLogOdds_[i]
+                gridLaserLogOdds_[i] = gridLaserLogOdds_[i];                        //Unknown cell   
             }else if(z[k] < maxRangeInt && abs(r - z[k]) < (lambda_r*scale_)/2){
-                //Occupied: gridLaserLogOdds_[i] = locc + gridLaserLogOdds_[i]
+                gridLaserLogOdds_[i] = locc + gridLaserLogOdds_[i];                 //Occupied cell
             }else if(r <= z[k]){
-                //Free: gridLaserLogOdds_[i] = lfree + gridLaserLogOdds_[i]
+                gridLaserLogOdds_[i] = lfree + gridLaserLogOdds_[i];                //Free cell
             }
+
+            msg_mapLaserLogOdds_.data[i] = getLikelihoodFromLogOdds(gridLaserLogOdds_[i])*100;
         }
     }
-
-
-
-
 
     pub_mapLaserLogOdds_.publish(msg_mapLaserLogOdds_);    
 }
@@ -254,11 +252,15 @@ void Perception::updateMapLaserWithHIMM(const std::vector<float>& z)
 
     int rx = robot.x*scale_;
     int ry = robot.y*scale_;
+    float theta = robot.theta;
 
     float maxRange = 10.0; // 10 m
     float lambda_r = 0.2; //  20 cm
     float lambda_phi = 1.0;  // 1 degree
     int maxRangeInt = maxRange*scale_;
+
+    int i;
+    float r, phi, k;
 
     // TODO:
     // varrer celulas ao redor de (rx,ry) em um range de -maxRangeInt ate +maxRangeInt nas duas direcoes
@@ -271,15 +273,26 @@ void Perception::updateMapLaserWithHIMM(const std::vector<float>& z)
     // para visualizar corretamente no rviz, sempre atualizar msg_mapLaserHIMM_.data[i]
     // importante lembrar de converter o valor, originalmente de 0 a 15, para OccupancyGrid data (que vai de 0 a 100)
 
+    for (int cellX = rx -maxRangeInt; cellX <= rx +maxRangeInt; cellX++){
+        for (int cellY = ry -maxRangeInt; cellY <= ry +maxRangeInt; cellY++){
+            r = sqrt(pow(cellX - rx, 2) + pow(cellY - ry));
+            phi = atan2(cellY - ry, cellX - rx) - theta;
+            phi = normalizeAngleDEG(phi);
+            k = getNearestLaserBeam(phi);
 
+            i = getCellIndexFromXY(cellX, cellY);
+            
+            if(r > min(maxRangeInt, z[k] + (lambda_r*scale_)/2) || abs(phi - getAngleOfLaserBeam(k)) > lambda_phi/2){
+                gridLaserHIMM_[i] = gridLaserHIMM_[i];                              //Unknown cell   
+            }else if(z[k] < maxRangeInt && abs(r - z[k]) < (lambda_r*scale_)/2){
+                gridLaserHIMM_[i] = min(15, gridLaserHIMM_[i] + 3);                 //Occupied cell
+            }else if(r <= z[k]){
+                gridLaserHIMM_[i] = max(0, gridLaserHIMM_[i] - 1);                  //Free cell
+            }
 
-
-
-
-
-
-
-
+            msg_mapLaserHIMM_.data[i] = (gridLaserHIMM_[i]/15)*100
+        }
+    }
 
     pub_mapLaserHIMM_.publish(msg_mapLaserHIMM_);
 }
@@ -299,6 +312,8 @@ void Perception::updateMapSonar(const std::vector<float>& z)
     float R = maxRange;
     float beta = lambda_phi/2.0;  // 15 degrees
 
+    int i;
+    float r, alpha, k, OccUpdate, Occ;
     
     // TODO:
     // varrer celulas ao redor de (rx,ry) em um range de -maxRangeInt ate +maxRangeInt nas duas direcoes
@@ -313,12 +328,29 @@ void Perception::updateMapSonar(const std::vector<float>& z)
     // para visualizar corretamente no rviz, sempre atualizar msg_mapSonarHIMM_.data[i]
     // importante lembrar de converter o valor, originalmente de 0 a 15, para OccupancyGrid data (que vai de 0 a 100)
 
+    for (int cellX = rx -maxRangeInt; cellX <= rx +maxRangeInt; cellX++){
+        for (int cellY = ry -maxRangeInt; cellY <= ry +maxRangeInt; cellY++){
+            r = sqrt(pow(cellX - rx, 2) + pow(cellY - ry));
+            alpha = atan2(cellY - ry, cellX - rx) - theta;
+            alpha = normalizeAngleDEG(alpha);
+            k = getNearestLaserBeam(alpha);
 
+            i = getCellIndexFromXY(cellX, cellY);
+            
+            if(r > min(maxRangeInt, z[k] + (lambda_r*scale_)/2) || abs(alpha - getAngleOfSonarBeam(k)) > lambda_phi/2){
+                OccUpdate = 0.5;                                                                            //Region III & IV
+            }else if(z[k] < maxRangeInt && abs(r - z[k]) < (lambda_r*scale_)/2){    
+                OccUpdate = 0.5 * (((maxRangeInt - r)/maxRangeInt + (beta - alpha)/beta)/2) + 0.5;          //Region I
+            }else if(r <= z[k]){        
+                OccUpdate = 0.5 * (1 - ((maxRangeInt - r)/maxRangeInt + (beta - alpha)/beta)/2);            //Region II
+            }
 
+            Occ = (OccUpdate * gridSonar_[i])/((OccUpdate * gridSonar_[i]) + ((1 - OccUpdate) * (1 - gridSonar_[i])));
+            gridSonar_[i] = min(0.99, max(0.01, Occ));
 
-
-
-
+            msg_mapSonar_.data[i] = gridSonar_[i]*100;
+        }
+    }
 
     pub_mapSonar_.publish(msg_mapSonar_);   
 }
