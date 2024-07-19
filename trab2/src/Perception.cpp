@@ -194,6 +194,7 @@ void Perception::updateMapLaserWithLogOdds(const std::vector<float>& z)
 
     int rx = robot.x*scale_;
     int ry = robot.y*scale_;
+    float theta = robot.theta;
 
     float locc, lfree;
     float pocc = 0.7, pfree = 0.4;
@@ -204,6 +205,9 @@ void Perception::updateMapLaserWithLogOdds(const std::vector<float>& z)
     float lambda_r = 0.2; //  20 cm
     float lambda_phi = 1.0;  // 1 degree
     int maxRangeInt = maxRange*scale_;
+
+    int i;
+    float r, phi, k;
 
     // TODO:
     // varrer celulas ao redor de (rx,ry) em um range de -maxRangeInt ate +maxRangeInt nas duas direcoes
@@ -217,7 +221,24 @@ void Perception::updateMapLaserWithLogOdds(const std::vector<float>& z)
     // importante lembrar de converter o valor de log-odds para OccupancyGrid data (que vai de 0 a 100)
     // Dica: converter primeiro para probabilidades usando a funcao getLikelihoodFromLogOdds() e multiplicar por 100
 
+    for (int cellX = rx -maxRangeInt; cellX <= rx +maxRangeInt; cellX++){
+        for (int cellY = ry -maxRangeInt; cellY <= ry +maxRangeInt; cellY++){
+            r = sqrt(pow(cellX - rx, 2) + pow(cellY - ry));
+            phi = atan2(cellY - ry, cellX - rx) - theta;
+            phi = normalizeAngleDEG(phi);
+            k = getNearestLaserBeam(phi);
 
+            i = getCellIndexFromXY(cellX, cellY);
+            
+            if(r > min(maxRangeInt, z[k] + (lambda_r*scale_)/2) || abs(phi - getAngleOfLaserBeam(k)) > lambda_phi/2){
+                //Unknown: gridLaserLogOdds_[i] = gridLaserLogOdds_[i]
+            }else if(z[k] < maxRangeInt && abs(r - z[k]) < (lambda_r*scale_)/2){
+                //Occupied: gridLaserLogOdds_[i] = locc + gridLaserLogOdds_[i]
+            }else if(r <= z[k]){
+                //Free: gridLaserLogOdds_[i] = lfree + gridLaserLogOdds_[i]
+            }
+        }
+    }
 
 
 
