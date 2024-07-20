@@ -204,7 +204,7 @@ void Perception::updateMapLaserWithLogOdds(const std::vector<float>& z)
     float maxRange = 10.0; // 10 m
     float lambda_r = 0.2; //  20 cm
     float lambda_phi = 1.0;  // 1 degree
-    int maxRangeInt = maxRange*scale_;
+    float maxRangeInt = maxRange*scale_;
 
     int i;
     float r, phi, k;
@@ -257,7 +257,7 @@ void Perception::updateMapLaserWithHIMM(const std::vector<float>& z)
     float maxRange = 10.0; // 10 m
     float lambda_r = 0.2; //  20 cm
     float lambda_phi = 1.0;  // 1 degree
-    int maxRangeInt = maxRange*scale_;
+    float maxRangeInt = maxRange*scale_;
 
     int i;
     float r, phi, k;
@@ -307,7 +307,7 @@ void Perception::updateMapSonar(const std::vector<float>& z)
     float maxRange = 5.0; // 5 m
     float lambda_r = 0.5; //  50 cm
     float lambda_phi = 30.0;  // 30 degrees
-    int maxRangeInt = maxRange*scale_;
+    float maxRangeInt = maxRange*scale_;
 
     float R = maxRange;
     float beta = lambda_phi/2.0;  // 15 degrees
@@ -331,7 +331,7 @@ void Perception::updateMapSonar(const std::vector<float>& z)
     for (int cellX = rx -maxRangeInt; cellX <= rx +maxRangeInt; cellX++){
         for (int cellY = ry -maxRangeInt; cellY <= ry +maxRangeInt; cellY++){
             r = sqrt(pow(cellX - rx, 2) + pow(cellY - ry, 2));
-            alpha = atan2(cellY - ry, cellX - rx) - theta;
+            alpha = atan2(cellY - ry, cellX - rx) - alpha;
             alpha = normalizeAngleDEG(alpha);
             k = getNearestLaserBeam(alpha);
 
